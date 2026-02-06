@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
+const isSmallScreen = width < 375;
 
 // Тип для сессии
 interface Session {
@@ -43,19 +44,10 @@ export default function TimerScreen() {
   const [countdownTime, setCountdownTime] = useState(25 * 60);
   const [pomodoroPhase, setPomodoroPhase] = useState<PomodoroPhase>('focus');
   const [completedPomodoros, setCompletedPomodoros] = useState(0);
-  const [lapTimes, setLapTimes] = useState<number[]>([]);
   
   // Анимации
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const timerScaleAnim = useRef(new Animated.Value(1)).current;
-  const modeSwitchAnim = useRef(new Animated.Value(0)).current;
-  const gradientAnim = useRef(new Animated.Value(0)).current;
-  
-  // Цвета для градиента
-  const purpleGradient = ['#787bbc', '#9d9ae5', '#c5c3ff'];
-  const darkPurpleGradient = ['#4c4eaf', '#787bbc', '#9d9ae5'];
-  const focusGradient = ['#4c4eaf', '#787bbc'];
-  const breakGradient = ['#c5c3ff', '#9d9ae5'];
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   // Настройки Pomodoro
   const pomodoroSettings = {
@@ -65,23 +57,31 @@ export default function TimerScreen() {
     pomodorosBeforeLongBreak: 4
   };
 
-  // Анимация градиента
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(gradientAnim, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: false,
-        }),
-        Animated.timing(gradientAnim, {
-          toValue: 0,
-          duration: 3000,
-          useNativeDriver: false,
-        }),
-      ])
-    ).start();
-  }, []);
+  // Цвета в зависимости от режима
+  const getColors = () => {
+    switch (mode) {
+      case 'pomodoro':
+        return {
+          primary: pomodoroPhase === 'focus' ? '#4A4CB1' : '#787BBC',
+          secondary: pomodoroPhase === 'focus' ? '#5E60CE' : '#9D9AE5',
+          light: pomodoroPhase === 'focus' ? '#EDEEFF' : '#F5F5FF',
+          background: pomodoroPhase === 'focus' ? '#F0F1FF' : '#F8F9FF',
+          text: '#2C2C54',
+          mutedText: '#6C6C9C'
+        };
+      default:
+        return {
+          primary: '#4A4CB1',
+          secondary: '#787BBC',
+          light: '#EDEEFF',
+          background: '#F0F1FF',
+          text: '#2C2C54',
+          mutedText: '#6C6C9C'
+        };
+    }
+  };
+
+  const colors = getColors();
 
   // Установка времени в зависимости от режима
   useEffect(() => {
@@ -135,13 +135,13 @@ export default function TimerScreen() {
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.02,
-            duration: 1500,
+            toValue: 1.03,
+            duration: 2000,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 1500,
+            duration: 2000,
             useNativeDriver: true,
           }),
         ])
@@ -242,12 +242,12 @@ export default function TimerScreen() {
     setIsActive(!isActive);
     
     Animated.sequence([
-      Animated.timing(timerScaleAnim, {
-        toValue: 0.97,
+      Animated.timing(fadeAnim, {
+        toValue: 0.95,
         duration: 100,
         useNativeDriver: true,
       }),
-      Animated.timing(timerScaleAnim, {
+      Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 100,
         useNativeDriver: true,
@@ -291,16 +291,11 @@ export default function TimerScreen() {
       }
     } else {
       setSeconds(0);
-      setLapTimes([]);
     }
     setIsActive(false);
   };
 
-  const addLap = () => {
-    if (mode === 'stopwatch' && isActive) {
-      setLapTimes(prev => [...prev, seconds]);
-    }
-  };
+  
 
   const saveCurrentSession = async () => {
     if (seconds === 0 && mode !== 'stopwatch') {
@@ -384,13 +379,6 @@ export default function TimerScreen() {
       return;
     }
     
-    Animated.spring(modeSwitchAnim, {
-      toValue: newMode === 'stopwatch' ? 0 : newMode === 'countdown' ? 1 : 2,
-      useNativeDriver: false,
-      tension: 50,
-      friction: 7,
-    }).start();
-    
     setMode(newMode);
     if (newMode === 'countdown') {
       setSeconds(countdownTime);
@@ -399,15 +387,8 @@ export default function TimerScreen() {
       setSeconds(pomodoroSettings.focusTime);
     } else {
       setSeconds(0);
-      setLapTimes([]);
+      
     }
-  };
-
-  const getCurrentGradient = () => {
-    if (mode === 'pomodoro') {
-      return pomodoroPhase === 'focus' ? focusGradient : breakGradient;
-    }
-    return isActive ? darkPurpleGradient : purpleGradient;
   };
 
   const getModeTitle = () => {
@@ -420,26 +401,23 @@ export default function TimerScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={getCurrentGradient()}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
+    <ThemedView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView 
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
         {/* Заголовок */}
         <ThemedView style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-back" size={24} color="white" />
+            <Ionicons name="chevron-back" size={24} color={colors.primary} />
           </TouchableOpacity>
           
-          <ThemedText type="title" style={styles.title}>
+          <ThemedText type="title" style={[styles.title, { color: colors.text }]}>
             {getModeTitle()}
           </ThemedText>
           
@@ -447,168 +425,121 @@ export default function TimerScreen() {
             style={[styles.saveButtonHeader, (seconds === 0 || isActive) && styles.disabledButton]}
             onPress={saveCurrentSession}
             disabled={seconds === 0 || isActive}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Feather name="save" size={20} color="white" />
+            <Feather name="save" size={20} color={seconds === 0 || isActive ? colors.mutedText : colors.primary} />
           </TouchableOpacity>
         </ThemedView>
 
         {/* Переключатель режимов */}
-        <ThemedView style={styles.modeSelector}>
-          <Animated.View 
-            style={[
-              styles.modeIndicator,
-              {
-                transform: [{
-                  translateX: modeSwitchAnim.interpolate({
-                    inputRange: [0, 1, 2],
-                    outputRange: [0, width / 3, (width / 3) * 2]
-                  })
-                }]
-              }
-            ]}
-          />
-          
-          {(['stopwatch', 'countdown', 'pomodoro'] as TimerMode[]).map((modeType) => (
-            <TouchableOpacity 
-              key={modeType}
-              style={styles.modeButton}
-              onPress={() => switchMode(modeType)}
-              activeOpacity={0.7}
-            >
-              {modeType === 'stopwatch' && (
-                <FontAwesome 
-                  name="stopwatch" 
-                  size={18} 
-                  color={mode === modeType ? 'white' : 'rgba(255,255,255,0.7)'} 
-                />
-              )}
-              {modeType === 'countdown' && (
-                <Ionicons 
-                  name="timer-outline" 
-                  size={18} 
-                  color={mode === modeType ? 'white' : 'rgba(255,255,255,0.7)'} 
-                />
-              )}
-              {modeType === 'pomodoro' && (
-                <MaterialIcons 
-                  name="local-cafe" 
-                  size={18} 
-                  color={mode === modeType ? 'white' : 'rgba(255,255,255,0.7)'} 
-                />
-              )}
-              <ThemedText style={[
-                styles.modeButtonText,
-                mode === modeType && styles.modeButtonTextActive
-              ]}>
-                {modeType === 'stopwatch' ? 'Stopwatch' : 
-                 modeType === 'countdown' ? 'Countdown' : 'Pomodoro'}
-              </ThemedText>
-            </TouchableOpacity>
-          ))}
+        <ThemedView style={styles.modeSelectorContainer}>
+          <ThemedView style={[styles.modeSelector, { backgroundColor: colors.light }]}>
+            {(['stopwatch', 'countdown', 'pomodoro'] as TimerMode[]).map((modeType) => (
+              <TouchableOpacity 
+                key={modeType}
+                style={[
+                  styles.modeButton,
+                  mode === modeType && styles.modeButtonActive,
+                  mode === modeType && { backgroundColor: colors.primary }
+                ]}
+                onPress={() => switchMode(modeType)}
+                activeOpacity={0.7}
+              >
+                {modeType === 'stopwatch' && (
+                  <FontAwesome 
+                    name="stopwatch" 
+                    size={16} 
+                    color={mode === modeType ? 'white' : colors.mutedText} 
+                  />
+                )}
+                {modeType === 'countdown' && (
+                  <Ionicons 
+                    name="timer-outline" 
+                    size={16} 
+                    color={mode === modeType ? 'white' : colors.mutedText} 
+                  />
+                )}
+                {modeType === 'pomodoro' && (
+                  <MaterialIcons 
+                    name="local-cafe" 
+                    size={16} 
+                    color={mode === modeType ? 'white' : colors.mutedText} 
+                  />
+                )}
+                <ThemedText style={[
+                  styles.modeButtonText,
+                  { color: mode === modeType ? 'white' : colors.mutedText },
+                  mode === modeType && styles.modeButtonTextActive
+                ]}>
+                  {modeType === 'stopwatch' ? 'Stopwatch' : 
+                   modeType === 'countdown' ? 'Countdown' : 'Pomodoro'}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </ThemedView>
         </ThemedView>
 
-        {/* Отображение таймера */}
+        {/* Основной таймер */}
         <Animated.View 
           style={[
             styles.timerContainer,
             {
               transform: [
-                { scale: timerScaleAnim },
-                { scale: pulseAnim }
+                { scale: pulseAnim },
+                { scale: fadeAnim }
               ]
             }
           ]}
         >
-          <ThemedText style={styles.timerText}>
-            {formatTime(seconds)}
-          </ThemedText>
-          
-          {mode === 'pomodoro' && (
-            <ThemedView style={styles.pomodoroInfo}>
-              <ThemedView style={[
-                styles.pomodoroPhase,
-                pomodoroPhase === 'focus' && styles.pomodoroPhaseFocus,
-                pomodoroPhase === 'shortBreak' && styles.pomodoroPhaseShortBreak,
-                pomodoroPhase === 'longBreak' && styles.pomodoroPhaseLongBreak,
-              ]}>
-                <ThemedText style={styles.pomodoroPhaseText}>
-                  {pomodoroPhase === 'focus' ? 'Focus Time' : 
-                   pomodoroPhase === 'shortBreak' ? 'Short Break' : 'Long Break'}
-                </ThemedText>
-              </ThemedView>
-              
-              {pomodoroPhase === 'focus' && (
-                <ThemedText style={styles.pomodoroCount}>
-                  Pomodoro {completedPomodoros + 1}
-                </ThemedText>
-              )}
-            </ThemedView>
-          )}
-        </Animated.View>
-
-        {/* Секция задачи */}
-        <ThemedView style={styles.taskSection}>
-          {mode !== 'pomodoro' && (
-            <>
-              {showTaskInput ? (
-                <ThemedView style={styles.taskInputContainer}>
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)']}
-                    style={styles.taskInputWrapper}
-                  >
-                    <MaterialIcons name="work" size={20} color="rgba(255,255,255,0.9)" />
-                    <TextInput
-                      style={styles.taskInput}
-                      placeholder="What are you focusing on?"
-                      placeholderTextColor="rgba(255,255,255,0.6)"
-                      value={taskInput}
-                      onChangeText={setTaskInput}
-                      onSubmitEditing={toggleTimer}
-                      returnKeyType="done"
-                    />
-                    {taskInput.length > 0 && (
-                      <TouchableOpacity 
-                        onPress={() => setTaskInput('')}
-                        style={styles.clearButton}
-                      >
-                        <Feather name="x" size={18} color="rgba(255,255,255,0.6)" />
-                      </TouchableOpacity>
-                    )}
-                  </LinearGradient>
+          <LinearGradient
+            colors={[colors.primary, colors.secondary]}
+            style={styles.timerCircle}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <ThemedText style={[styles.timerText, { color: 'white' }]}>
+              {formatTime(seconds)}
+            </ThemedText>
+            
+            {mode === 'pomodoro' && (
+              <ThemedView style={styles.pomodoroInfo}>
+                <ThemedView style={[
+                  styles.pomodoroPhase,
+                  { backgroundColor: 'rgba(255,255,255,0.2)' }
+                ]}>
+                  <ThemedText style={[styles.pomodoroPhaseText]}>
+                    {pomodoroPhase === 'focus' ? 'Focus Time' : 
+                     pomodoroPhase === 'shortBreak' ? 'Short Break' : 'Long Break'}
+                  </ThemedText>
                 </ThemedView>
-              ) : (
-                <TouchableOpacity 
-                  style={styles.taskPreview}
-                  onPress={() => setShowTaskInput(true)}
-                  activeOpacity={0.7}
-                >
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                    style={styles.taskPreviewGradient}
-                  >
-                    <MaterialIcons name="work" size={16} color="rgba(255,255,255,0.9)" />
-                    <ThemedText style={styles.taskPreviewText} numberOfLines={1}>
-                      {taskInput || 'Add task'}
-                    </ThemedText>
-                    <Feather name="edit-2" size={14} color="rgba(255,255,255,0.6)" />
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </ThemedView>
+                
+                {pomodoroPhase === 'focus' && (
+                  <ThemedText style={[styles.pomodoroCount]}>
+                    Session {completedPomodoros + 1}
+                  </ThemedText>
+                )}
+              </ThemedView>
+            )}
+          </LinearGradient>
+        </Animated.View>
 
         {/* Быстрое добавление времени для countdown */}
         {mode === 'countdown' && (
           <ThemedView style={styles.quickTimeContainer}>
-            <ThemedText style={styles.quickTimeLabel}>Quick Set</ThemedText>
+            <ThemedText style={[styles.quickTimeLabel, { color: colors.text }]}>
+              Quick Set
+            </ThemedText>
             <ThemedView style={styles.quickTimeButtons}>
               {[5, 10, 15, 25, 30].map((minutes) => (
                 <TouchableOpacity
                   key={minutes}
                   style={[
                     styles.quickTimeButton,
-                    countdownTime === minutes * 60 && styles.quickTimeButtonActive
+                    { backgroundColor: colors.light },
+                    countdownTime === minutes * 60 && { 
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary
+                    }
                   ]}
                   onPress={() => setCountdownMinutes(minutes)}
                   disabled={isActive}
@@ -616,6 +547,7 @@ export default function TimerScreen() {
                 >
                   <ThemedText style={[
                     styles.quickTimeText,
+                    { color: colors.mutedText },
                     countdownTime === minutes * 60 && styles.quickTimeTextActive,
                     isActive && styles.quickTimeTextDisabled
                   ]}>
@@ -627,16 +559,42 @@ export default function TimerScreen() {
           </ThemedView>
         )}
 
+        {/* Поле для задачи */}
+        
+          <ThemedView style={styles.taskContainer}>
+            <ThemedView style={[styles.taskInputWrapper, { backgroundColor: colors.light }]}>
+              <MaterialIcons name="work" size={20} color={colors.mutedText} />
+              <TextInput
+                style={[styles.taskInput, { color: colors.text }]}
+                placeholder="What are you focusing on?"
+                placeholderTextColor={colors.mutedText}
+                value={taskInput}
+                onChangeText={setTaskInput}
+                onSubmitEditing={toggleTimer}
+                returnKeyType="done"
+              />
+              {taskInput.length > 0 && (
+                <TouchableOpacity 
+                  onPress={() => setTaskInput('')}
+                  style={styles.clearButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Feather name="x" size={18} color={colors.mutedText} />
+                </TouchableOpacity>
+              )}
+            </ThemedView>
+          </ThemedView>
+        }
+
         {/* Кнопки управления */}
-        <ThemedView style={styles.controlButtons}>
+        <ThemedView style={styles.controlsContainer}>
           {/* Левая кнопка */}
           <TouchableOpacity
             style={[
-              styles.controlButton,
-              styles.sideButton,
-              (mode === 'stopwatch' && !isActive) && styles.disabledButton
+              styles.sideControl,
+              { backgroundColor: colors.light }
             ]}
-            onPress={mode === 'stopwatch' ? addLap : 
+            onPress={ 
                      mode === 'countdown' ? () => setCountdownMinutes(countdownTime/60 + 5) :
                      () => {
                        if (!isActive) {
@@ -647,33 +605,32 @@ export default function TimerScreen() {
             activeOpacity={0.7}
           >
             {mode === 'stopwatch' ? (
-              <FontAwesome name="flag" size={20} color={!isActive ? 'rgba(255,255,255,0.3)' : 'white'} />
+              <FontAwesome name="flag" size={20} color={!isActive ? colors.mutedText : colors.primary} />
             ) : mode === 'countdown' ? (
-              <Ionicons name="add" size={20} color={isActive ? 'rgba(255,255,255,0.3)' : 'white'} />
+              <Ionicons name="add" size={20} color={isActive ? colors.mutedText : colors.primary} />
             ) : (
-              <MaterialIcons name="loop" size={20} color={isActive ? 'rgba(255,255,255,0.3)' : 'white'} />
+              <MaterialIcons name="loop" size={20} color={isActive ? colors.mutedText : colors.primary} />
             )}
             <ThemedText style={[
-              styles.controlButtonText,
-              (mode === 'stopwatch' && !isActive) && styles.disabledText,
-              (mode === 'countdown' && isActive) && styles.disabledText
+              styles.sideControlText,
+              { color: colors.mutedText },
+              ((mode === 'stopwatch' && !isActive) || (mode === 'countdown' && isActive)) && styles.disabledText
             ]}>
-              {mode === 'stopwatch' ? 'Lap' : 
-               mode === 'countdown' ? '+5min' : 'Switch'}
+              {mode === 'countdown' ? '+5 min' : 'Switch'}
             </ThemedText>
           </TouchableOpacity>
 
           {/* Центральная кнопка */}
           <TouchableOpacity
-            style={styles.mainButtonContainer}
+            style={styles.mainControlContainer}
             onPress={toggleTimer}
             disabled={mode !== 'pomodoro' && !taskInput.trim()}
-            activeOpacity={0.8}
+            activeOpacity={0.9}
           >
             <LinearGradient
-              colors={isActive ? ['#877dd2', '#a59cff'] : ['#4c4eaf', '#787bbc']}
+              colors={isActive ? ['#FF6B6B', '#FF8787'] : [colors.primary, colors.secondary]}
               style={[
-                styles.mainButton,
+                styles.mainControl,
                 (mode !== 'pomodoro' && !taskInput.trim()) && styles.disabledButton
               ]}
               start={{ x: 0, y: 0 }}
@@ -685,7 +642,7 @@ export default function TimerScreen() {
                 color="white" 
               />
             </LinearGradient>
-            <ThemedText style={styles.mainButtonText}>
+            <ThemedText style={[styles.mainControlText, { color: colors.text }]}>
               {isActive ? 'Pause' : 'Start'}
             </ThemedText>
           </TouchableOpacity>
@@ -693,9 +650,8 @@ export default function TimerScreen() {
           {/* Правая кнопка */}
           <TouchableOpacity
             style={[
-              styles.controlButton,
-              styles.sideButton,
-              (seconds === 0 && mode !== 'stopwatch') && styles.disabledButton
+              styles.sideControl,
+              { backgroundColor: colors.light }
             ]}
             onPress={resetTimer}
             disabled={seconds === 0 && mode !== 'stopwatch'}
@@ -704,10 +660,11 @@ export default function TimerScreen() {
             <Ionicons 
               name="refresh" 
               size={20} 
-              color={(seconds === 0 && mode !== 'stopwatch') ? 'rgba(255,255,255,0.3)' : 'white'} 
+              color={(seconds === 0 && mode !== 'stopwatch') ? colors.mutedText : colors.primary} 
             />
             <ThemedText style={[
-              styles.controlButtonText,
+              styles.sideControlText,
+              { color: colors.mutedText },
               (seconds === 0 && mode !== 'stopwatch') && styles.disabledText
             ]}>
               Reset
@@ -715,64 +672,67 @@ export default function TimerScreen() {
           </TouchableOpacity>
         </ThemedView>
 
-        {/* Отображение кругов */}
-        {mode === 'stopwatch' && lapTimes.length > 0 && (
-          <ThemedView style={styles.lapContainer}>
-            <ThemedText style={styles.lapTitle}>Laps ({lapTimes.length})</ThemedText>
-            <ScrollView 
-              style={styles.lapList} 
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.lapListContent}
-            >
-              {[...lapTimes].reverse().map((lapTime, index) => (
-                <ThemedView key={index} style={styles.lapItem}>
-                  <ThemedText style={styles.lapNumber}>
-                    Lap {lapTimes.length - index}
-                  </ThemedText>
-                  <ThemedText style={styles.lapTime}>
-                    {formatTime(lapTime)}
-                  </ThemedText>
-                </ThemedView>
-              ))}
-            </ScrollView>
-          </ThemedView>
-        )}
+        
 
         {/* Статистика Pomodoro */}
         {mode === 'pomodoro' && (
           <ThemedView style={styles.statsContainer}>
-            <LinearGradient
-              colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-              style={styles.statsCard}
-            >
-              <ThemedText style={styles.statsTitle}>Today's Progress</ThemedText>
+            <ThemedView style={[styles.statsCard, { backgroundColor: colors.light }]}>
+              <ThemedText style={[styles.statsTitle, { color: colors.text }]}>
+                Today's Progress
+              </ThemedText>
               <ThemedView style={styles.statsGrid}>
                 <ThemedView style={styles.statItem}>
-                  <ThemedText style={styles.statValue}>{completedPomodoros}</ThemedText>
-                  <ThemedText style={styles.statLabel}>Sessions</ThemedText>
+                  <ThemedText style={[styles.statValue, { color: colors.primary }]}>
+                    {completedPomodoros}
+                  </ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.mutedText }]}>
+                    Sessions
+                  </ThemedText>
                 </ThemedView>
                 <ThemedView style={styles.statItem}>
-                  <ThemedText style={styles.statValue}>
+                  <ThemedText style={[styles.statValue, { color: colors.primary }]}>
                     {completedPomodoros * 25}
                   </ThemedText>
-                  <ThemedText style={styles.statLabel}>Minutes</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.mutedText }]}>
+                    Minutes
+                  </ThemedText>
                 </ThemedView>
                 <ThemedView style={styles.statItem}>
-                  <ThemedText style={styles.statValue}>
+                  <ThemedText style={[styles.statValue, { color: colors.primary }]}>
                     {Math.floor(completedPomodoros / pomodoroSettings.pomodorosBeforeLongBreak)}
                   </ThemedText>
-                  <ThemedText style={styles.statLabel}>Long Breaks</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.mutedText }]}>
+                    Long Breaks
+                  </ThemedText>
                 </ThemedView>
               </ThemedView>
-            </LinearGradient>
+            </ThemedView>
           </ThemedView>
         )}
+
+        {/* Подсказки по режимам */}
+        <ThemedView style={styles.tipsContainer}>
+          <ThemedText style={[styles.tipsTitle, { color: colors.mutedText }]}>
+            Tips
+          </ThemedText>
+          {mode === 'countdown' && (
+            <ThemedText style={[styles.tipsText, { color: colors.mutedText }]}>
+              • Use quick set buttons to adjust timer before starting
+            </ThemedText>
+          )}
+          {mode === 'pomodoro' && (
+            <ThemedText style={[styles.tipsText, { color: colors.mutedText }]}>
+              • After 4 focus sessions, take a longer 15-minute break
+            </ThemedText>
+          )}
+        </ThemedView>
       </ScrollView>
-    </LinearGradient>
+    </ThemedView>
   );
 }
 
-// Улучшенные стили
+// Чистые, аккуратные стили
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -781,35 +741,33 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingTop: 60,
     paddingBottom: 30,
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingBottom: 20,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: 'white',
     textAlign: 'center',
     flex: 1,
-    marginHorizontal: 10,
   },
   saveButtonHeader: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -817,60 +775,60 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   disabledText: {
-    color: 'rgba(255,255,255,0.3)',
+    opacity: 0.5,
+  },
+  modeSelectorContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
   },
   modeSelector: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginHorizontal: 20,
     borderRadius: 12,
-    marginVertical: 20,
-    height: 56,
-    position: 'relative',
-  },
-  modeIndicator: {
-    position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 10,
-    height: 48,
-    width: (width - 40) / 3 - 8,
-    top: 4,
-    left: 4,
+    padding: 4,
   },
   modeButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  modeButtonActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   modeButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.7)',
   },
   modeButtonTextActive: {
-    color: 'white',
     fontWeight: '600',
   },
   timerContainer: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 24,
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    marginHorizontal: 20,
-    marginBottom: 30,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 30,
+  },
+  timerCircle: {
+    width: width * 0.3,
+    height: width * 0.2,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
   },
   timerText: {
-    fontSize: 68,
+    fontSize: width < 375 ? 48 : 56,
     fontWeight: '700',
-    color: 'white',
     fontVariant: ['tabular-nums'],
     letterSpacing: 1,
     includeFontPadding: false,
@@ -880,138 +838,96 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   pomodoroPhase: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  pomodoroPhaseFocus: {
-    backgroundColor: 'rgba(76, 78, 175, 0.3)',
-  },
-  pomodoroPhaseShortBreak: {
-    backgroundColor: 'rgba(197, 195, 255, 0.3)',
-  },
-  pomodoroPhaseLongBreak: {
-    backgroundColor: 'rgba(157, 154, 229, 0.3)',
-  },
+  paddingHorizontal: 20,
+  paddingVertical: 8,
+  borderRadius: 20,
+  backgroundColor: 'rgba(255,255,255,0.2)', 
+},
   pomodoroPhaseText: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'white',
+    color: '#2C2C54',
   },
   pomodoroCount: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 4,
-  },
-  taskSection: {
-    paddingHorizontal: 20,
-    marginBottom: 25,
-  },
-  taskInputContainer: {
-    width: '100%',
-  },
-  taskInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  taskInput: {
-    flex: 1,
-    fontSize: 16,
-    color: 'white',
     fontWeight: '500',
-    padding: 0,
-  },
-  clearButton: {
-    padding: 2,
-  },
-  taskPreview: {
-    width: '100%',
-  },
-  taskPreviewGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  taskPreviewText: {
-    flex: 1,
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '500',
+    marginTop: 6,
+    color: 'black',
   },
   quickTimeContainer: {
-    paddingHorizontal: 20,
     marginBottom: 25,
   },
   quickTimeLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
     marginBottom: 12,
   },
   quickTimeButtons: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
   },
   quickTimeButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    minWidth: 60,
+    borderColor: 'transparent',
+    minWidth: 55,
     alignItems: 'center',
-  },
-  quickTimeButtonActive: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderColor: 'rgba(255,255,255,0.3)',
   },
   quickTimeText: {
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.9)',
   },
   quickTimeTextActive: {
     color: 'white',
     fontWeight: '600',
   },
   quickTimeTextDisabled: {
-    color: 'rgba(255,255,255,0.3)',
+    opacity: 0.3,
   },
-  controlButtons: {
+  taskContainer: {
+    marginBottom: 25,
+  },
+  taskInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  taskInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    padding: 0,
+  },
+  clearButton: {
+    padding: 2,
+  },
+  controlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 40,
     marginBottom: 30,
   },
-  sideButton: {
+  sideControl: {
     alignItems: 'center',
-    padding: 10,
-    minWidth: 70,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    minWidth: 80,
   },
-  controlButton: {
-    alignItems: 'center',
-  },
-  controlButtonText: {
+  sideControlText: {
     fontSize: 12,
     fontWeight: '500',
-    color: 'white',
     marginTop: 6,
   },
-  mainButtonContainer: {
+  mainControlContainer: {
     alignItems: 'center',
   },
-  mainButton: {
+  mainControl: {
     width: 80,
     height: 80,
     borderRadius: 40,
@@ -1019,56 +935,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 8,
   },
-  mainButtonText: {
+  mainControlText: {
     fontSize: 13,
     fontWeight: '600',
-    color: 'white',
     marginTop: 8,
   },
-  lapContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    maxHeight: 200,
-  },
-  lapTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: 12,
-  },
-  lapList: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-  },
-  lapListContent: {
-    paddingVertical: 8,
-  },
-  lapItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  lapNumber: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-  },
-  lapTime: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'white',
-    fontVariant: ['tabular-nums'],
-  },
   statsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 25,
   },
   statsCard: {
     borderRadius: 16,
@@ -1077,8 +954,7 @@ const styles = StyleSheet.create({
   statsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
-    marginBottom: 16,
+    marginBottom: 20,
     textAlign: 'center',
   },
   statsGrid: {
@@ -1089,13 +965,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
-    color: 'white',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+  },
+  tipsContainer: {
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  tipsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  tipsText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
 });
