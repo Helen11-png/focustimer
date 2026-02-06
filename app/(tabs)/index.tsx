@@ -3,8 +3,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AntDesign, Feather, FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 // Тип для сессии
 interface Session {
@@ -16,18 +17,15 @@ interface Session {
 }
 
 export default function HomeScreen() {
-  // Состояния для таймера
-  const [seconds, setSeconds] = useState(0);
-  const [totalSeconds, setTotalSeconds] = useState(12560);
-  const [isActive, setIsActive] = useState(false);
-  const [taskInput, setTaskInput] = useState('');
-
+  const router = useRouter();
+  
   // Данные для статистики
   const [stats, setStats] = useState({
     todayFocus: 85, // минут
     weeklyGoal: 300, // минут
     completed: 42,
     streak: 14,
+    totalFocusTime: 12560, // в секундах
   });
 
   // Хранение сессий
@@ -37,9 +35,12 @@ export default function HomeScreen() {
     { id: '3', task: 'Reading', time: 1800, date: 'Mar 12, 8:00 PM', formattedTime: '30 min' },
     { id: '4', task: 'Coding Practice', time: 5400, date: 'Mar 11, 3:30 PM', formattedTime: '90 min' },
   ]);
+
   useEffect(() => {
     loadSessions();
+    loadStats();
   }, []);
+
   const loadSessions = async () => {
     try {
       const savedSessions = await AsyncStorage.getItem('focusSessions');
@@ -48,6 +49,17 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error('Error loading sessions:', error);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const savedStats = await AsyncStorage.getItem('focusStats');
+      if (savedStats) {
+        setStats(JSON.parse(savedStats));
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
     }
   };
 
@@ -60,100 +72,17 @@ export default function HomeScreen() {
     }
   };
 
-  // Таймер
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-
-    if (isActive) {
-      interval = setInterval(() => {
-        setSeconds(prev => prev + 1);
-        setTotalSeconds(prev => prev + 1);
-      }, 1000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isActive]);
-
-  const toggleTimer = () => {
-    setIsActive(!isActive);
-  };
-
-  const resetTimer = () => {
-    if (seconds > 0) {
-      Alert.alert(
-        'Save Session?',
-        `You have ${formatTime(seconds)} recorded. Do you want to save this session?`,
-        [
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => {
-              setSeconds(0);
-              setIsActive(false);
-            }
-          },
-          {
-            text: 'Save',
-            style: 'default',
-            onPress: () => saveCurrentSession()
-          }
-        ]
-      );
-    } else {
-      setSeconds(0);
-      setIsActive(false);
-    }
-  };
-
-  const saveCurrentSession = () => {
-    if (seconds === 0) {
-      Alert.alert('No Time', 'Timer is at 0:00. Start the timer first!');
-      return;
-    }
-
-    if (!taskInput.trim()) {
-      Alert.alert('Add Task', 'Please enter what you were focusing on!');
-      return;
-    }
-
-    const newSession: Session = {
-      id: Date.now().toString(),
-      task: taskInput,
-      time: seconds,
-      date: getCurrentDate(),
-      formattedTime: formatTimeToMinutes(seconds)
-    };
-
-    const updatedSessions = [newSession, ...recentSessions.slice(0, 9)]; // Храним последние 10 сессий
-    setRecentSessions(updatedSessions);
-    saveSessions(updatedSessions);
-    
-    // Обновляем статистику
-    const minutes = Math.floor(seconds / 60);
-    setStats(prev => ({
-      ...prev,
-      todayFocus: prev.todayFocus + minutes,
-      completed: prev.completed + 1
-    }));
-
-    // Сброс
-    setSeconds(0);
-    setIsActive(false);
-    setTaskInput('');
-    
-    Alert.alert('Session Saved!', `Great job! You focused for ${newSession.formattedTime} on "${taskInput}"`);
-  };
-
-  const formatTime = (totalSeconds: number) => {
+  const formatTimeToMinutes = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const remainingSeconds = totalSeconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes} min`;
   };
 
-  const formatTimeToMinutes = (totalSeconds: number) => {
+  const formatTotalTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     
@@ -165,26 +94,6 @@ export default function HomeScreen() {
 
   const formatMinutes = (minutes: number) => {
     return `${minutes} min`;
-  };
-
-  const getCurrentDate = () => {
-    const now = new Date();
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (now.toDateString() === today.toDateString()) {
-      return `Today, ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    } else if (now.toDateString() === yesterday.toDateString()) {
-      return `Yesterday, ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    } else {
-      return now.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
   };
 
   const deleteSession = (id: string) => {
@@ -224,13 +133,37 @@ export default function HomeScreen() {
     );
   };
 
+  // Быстрые действия
   const quickActions = [
-    { icon: 'play-circle', label: 'Start Focus', color: '#4c4eaf', action: () => setIsActive(true) },
-    { icon: 'save', label: 'Save Session', color: '#4ECDC4', action: saveCurrentSession },
-    { icon: 'target', label: 'Set Goal', color: '#FF6B6B' },
-    { icon: 'bar-chart', label: 'Stats', color: '#4ECDC4' },
-    { icon: 'trash-2', label: 'Clear All', color: '#FF6B6B', action: clearAllSessions },
+    { 
+      icon: 'play-circle', 
+      label: 'Start Timer', 
+      color: '#4c4eaf', 
+      action: () => router.push('/timer') 
+    },
+    { 
+      icon: 'target', 
+      label: 'Goals', 
+      color: '#FF6B6B',
+      action: () => router.push('/goals')
+    },
+    { 
+      icon: 'bar-chart', 
+      label: 'Stats', 
+      color: '#4ECDC4',
+      action: () => router.push('/stats')
+    },
+    { 
+      icon: 'settings', 
+      label: 'Settings', 
+      color: '#575875',
+      action: () => router.push('/settings')
+    },
   ];
+
+  // Прогресс цели
+  const goalProgress = Math.round((stats.todayFocus / 120) * 100); // 120 минут - дневная цель
+  const weeklyProgress = Math.round((stats.todayFocus / stats.weeklyGoal) * 100);
 
   return (
     <ParallaxScrollView
@@ -242,67 +175,25 @@ export default function HomeScreen() {
       {/* Приветствие */}
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title" style={styles.welcomeTitle}>Welcome Back, Alex! 👋</ThemedText>
-        <ThemedText style={styles.welcomeSubtitle}>Ready for another productive day?</ThemedText>
+        <ThemedText style={styles.welcomeSubtitle}>Your focus dashboard</ThemedText>
       </ThemedView>
 
-      {/* Главный таймер */}
-      <ThemedView style={styles.timerContainer}>
-        <ThemedText style={styles.timerLabel}>Current Session</ThemedText>
-        <ThemedText type="title" style={styles.timerText}>
-          {formatTime(seconds)}
-        </ThemedText>
-        
-        <ThemedView style={styles.timerButtons}>
-          <TouchableOpacity
-            style={[styles.button, isActive ? styles.pauseButton : styles.startButton]}
-            onPress={toggleTimer}>
-            <Ionicons name={isActive ? 'pause' : 'play'} size={20} color="white" />
-            <ThemedText style={styles.buttonText}>
-              {isActive ? 'Pause' : 'Start'}
-            </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.button, styles.resetButton]}
-            onPress={resetTimer}>
-            <Ionicons name="refresh" size={20} color="white" />
-            <ThemedText style={styles.buttonText}>Reset/Save</ThemedText>
-          </TouchableOpacity>
+      {/* Главный призыв к действию */}
+      <TouchableOpacity 
+        style={styles.ctaContainer}
+        onPress={() => router.push('/timer')}
+      >
+        <ThemedView style={styles.ctaContent}>
+          <ThemedView style={styles.ctaIcon}>
+            <Ionicons name="play-circle" size={40} color="white" />
+          </ThemedView>
+          <ThemedView style={styles.ctaTextContainer}>
+            <ThemedText type="title" style={styles.ctaTitle}>Start Focus Session</ThemedText>
+            <ThemedText style={styles.ctaSubtitle}>Tap to begin a new focus timer</ThemedText>
+          </ThemedView>
+          <Ionicons name="chevron-forward" size={24} color="#4c4eaf" />
         </ThemedView>
-
-        {/* Поле для ввода задачи */}
-        <ThemedView style={styles.taskInputContainer}>
-          <MaterialIcons name="work" size={20} color="#787bbc" />
-          <TextInput
-            style={styles.taskInput}
-            placeholder="What are you focusing on?"
-            placeholderTextColor="#999"
-            value={taskInput}
-            onChangeText={setTaskInput}
-            onSubmitEditing={isActive ? undefined : saveCurrentSession}
-            editable={!isActive}
-          />
-          {taskInput ? (
-            <TouchableOpacity onPress={() => setTaskInput('')}>
-              <Feather name="x-circle" size={18} color="#999" />
-            </TouchableOpacity>
-          ) : (
-            <Feather name="edit-2" size={18} color="#999" />
-          )}
-        </ThemedView>
-
-        {/* Подсказка */}
-        {!taskInput && !isActive && (
-          <ThemedText style={styles.hintText}>
-            Enter a task above, then start the timer!
-          </ThemedText>
-        )}
-        {isActive && (
-          <ThemedText style={[styles.hintText, { color: '#4c4eaf' }]}>
-            Focusing on: {taskInput || "Add task description"}
-          </ThemedText>
-        )}
-      </ThemedView>
+      </TouchableOpacity>
 
       {/* Быстрые действия */}
       <ThemedView style={styles.section}>
@@ -324,46 +215,86 @@ export default function HomeScreen() {
         </ScrollView>
       </ThemedView>
 
-      {/* Статистика */}
+      {/* Общая статистика */}
       <ThemedView style={styles.section}>
         <ThemedView style={styles.sectionHeader}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Today's Progress</ThemedText>
-          <TouchableOpacity>
-            <ThemedText style={styles.seeAll}>See All →</ThemedText>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>Focus Overview</ThemedText>
+          <TouchableOpacity onPress={() => router.push('/stats')}>
+            <ThemedText style={styles.seeAll}>Details →</ThemedText>
           </TouchableOpacity>
         </ThemedView>
         
-        <ThemedView style={styles.statsGrid}>
-          <ThemedView style={styles.statCard}>
-            <FontAwesome name="clock-o" size={24} color="#4c4eaf" />
-            <ThemedText style={styles.statValue}>{formatMinutes(stats.todayFocus)}</ThemedText>
-            <ThemedText style={styles.statDescription}>Today's Focus</ThemedText>
-            <ThemedView style={styles.progressBar}>
-              <ThemedView style={[styles.progressFill, { width: `${(stats.todayFocus / 120) * 100}%` }]} />
+        <ThemedView style={styles.overviewCard}>
+          <ThemedView style={styles.overviewRow}>
+            <ThemedView style={styles.overviewItem}>
+              <FontAwesome name="clock-o" size={20} color="#4c4eaf" />
+              <ThemedText style={styles.overviewValue}>{formatTotalTime(stats.totalFocusTime)}</ThemedText>
+              <ThemedText style={styles.overviewLabel}>Total Focus</ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.overviewDivider} />
+            
+            <ThemedView style={styles.overviewItem}>
+              <AntDesign name="checkcircle" size={20} color="#4ECDC4" />
+              <ThemedText style={styles.overviewValue}>{stats.completed}</ThemedText>
+              <ThemedText style={styles.overviewLabel}>Sessions</ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.overviewDivider} />
+            
+            <ThemedView style={styles.overviewItem}>
+              <Ionicons name="flame" size={20} color="#FF6B6B" />
+              <ThemedText style={styles.overviewValue}>{stats.streak}</ThemedText>
+              <ThemedText style={styles.overviewLabel}>Day Streak</ThemedText>
             </ThemedView>
           </ThemedView>
           
-          <ThemedView style={styles.statCard}>
-            <MaterialIcons name="flag" size={24} color="#4c4eaf" />
-            <ThemedText style={styles.statValue}>{Math.round((stats.todayFocus / stats.weeklyGoal) * 100)}%</ThemedText>
-            <ThemedText style={styles.statDescription}>Weekly Goal</ThemedText>
-            <ThemedView style={styles.progressBar}>
-              <ThemedView style={[styles.progressFill, { width: `${(stats.todayFocus / stats.weeklyGoal) * 100}%` }]} />
+          <ThemedView style={styles.progressSection}>
+            <ThemedView style={styles.progressHeader}>
+              <ThemedText style={styles.progressLabel}>Today's Progress</ThemedText>
+              <ThemedText style={styles.progressPercent}>{goalProgress}%</ThemedText>
             </ThemedView>
+            <ThemedView style={styles.progressBar}>
+              <ThemedView style={[styles.progressFill, { width: `${goalProgress}%` }]} />
+            </ThemedView>
+            <ThemedText style={styles.progressText}>
+              {stats.todayFocus} min of 120 min daily goal
+            </ThemedText>
+          </ThemedView>
+        </ThemedView>
+      </ThemedView>
+
+      {/* Достижения на этой неделе */}
+      <ThemedView style={styles.section}>
+        <ThemedView style={styles.sectionHeader}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>Weekly Progress</ThemedText>
+          <ThemedText style={styles.progressPercent}>{weeklyProgress}%</ThemedText>
+        </ThemedView>
+        
+        <ThemedView style={styles.weeklyCard}>
+          <ThemedView style={styles.weeklyProgress}>
+            <ThemedView style={styles.weeklyProgressBar}>
+              <ThemedView style={[styles.weeklyProgressFill, { width: `${weeklyProgress}%` }]} />
+            </ThemedView>
+            <ThemedText style={styles.weeklyProgressText}>
+              {stats.todayFocus} / {stats.weeklyGoal} minutes
+            </ThemedText>
           </ThemedView>
           
-          <ThemedView style={styles.statCard}>
-            <Ionicons name="flame" size={24} color="#FF6B6B" />
-            <ThemedText style={styles.statValue}>{stats.streak}</ThemedText>
-            <ThemedText style={styles.statDescription}>Day Streak</ThemedText>
-            <ThemedText style={styles.streakSubtext}>Keep it up! 🔥</ThemedText>
-          </ThemedView>
-          
-          <ThemedView style={styles.statCard}>
-            <AntDesign name="checkcircle" size={24} color="#4ECDC4" />
-            <ThemedText style={styles.statValue}>{stats.completed}</ThemedText>
-            <ThemedText style={styles.statDescription}>Sessions Done</ThemedText>
-            <ThemedText style={styles.streakSubtext}>This month</ThemedText>
+          <ThemedView style={styles.weeklyStats}>
+            <ThemedView style={styles.weeklyStat}>
+              <Feather name="trending-up" size={16} color="#06D6A0" />
+              <ThemedText style={styles.weeklyStatValue}>+12%</ThemedText>
+              <ThemedText style={styles.weeklyStatLabel}>vs last week</ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.weeklyStatDivider} />
+            
+            <ThemedView style={styles.weeklyStat}>
+              <Feather name="target" size={16} color="#4c4eaf" />
+              <ThemedText style={styles.weeklyStatValue}>4.2</ThemedText>
+              <ThemedText style={styles.weeklyStatLabel}>avg sessions/day</ThemedText>
+            </ThemedView>
           </ThemedView>
         </ThemedView>
       </ThemedView>
@@ -374,11 +305,9 @@ export default function HomeScreen() {
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Recent Sessions {recentSessions.length > 0 && `(${recentSessions.length})`}
           </ThemedText>
-          {recentSessions.length > 0 && (
-            <TouchableOpacity onPress={clearAllSessions}>
-              <ThemedText style={styles.seeAll}>Clear All</ThemedText>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity onPress={clearAllSessions}>
+            <ThemedText style={styles.seeAll}>Clear All</ThemedText>
+          </TouchableOpacity>
         </ThemedView>
         
         {recentSessions.length === 0 ? (
@@ -386,13 +315,23 @@ export default function HomeScreen() {
             <Feather name="clock" size={48} color="#ccc" />
             <ThemedText style={styles.emptyStateText}>No sessions yet</ThemedText>
             <ThemedText style={styles.emptyStateSubtext}>
-              Start a timer and save your first focus session!
+              Start your first focus session!
             </ThemedText>
+            <TouchableOpacity 
+              style={styles.emptyStateButton}
+              onPress={() => router.push('/timer')}
+            >
+              <ThemedText style={styles.emptyStateButtonText}>Start Timer</ThemedText>
+            </TouchableOpacity>
           </ThemedView>
         ) : (
           <ThemedView style={styles.sessionsList}>
-            {recentSessions.map((session) => (
-              <ThemedView key={session.id} style={styles.sessionCard}>
+            {recentSessions.slice(0, 3).map((session) => (
+              <TouchableOpacity 
+                key={session.id} 
+                style={styles.sessionCard}
+                onPress={() => Alert.alert('Session Details', `Task: ${session.task}\nDuration: ${session.formattedTime}\nDate: ${session.date}`)}
+              >
                 <ThemedView style={styles.sessionIcon}>
                   <MaterialIcons name="timer" size={20} color="#787bbc" />
                 </ThemedView>
@@ -408,8 +347,19 @@ export default function HomeScreen() {
                 >
                   <Feather name="trash-2" size={20} color="#999" />
                 </TouchableOpacity>
-              </ThemedView>
+              </TouchableOpacity>
             ))}
+            
+            {recentSessions.length > 3 && (
+              <TouchableOpacity 
+                style={styles.viewAllButton}
+                onPress={() => router.push('/sessions')}
+              >
+                <ThemedText style={styles.viewAllText}>
+                  View all {recentSessions.length} sessions →
+                </ThemedText>
+              </TouchableOpacity>
+            )}
           </ThemedView>
         )}
       </ThemedView>
@@ -418,16 +368,16 @@ export default function HomeScreen() {
       <ThemedView style={styles.quoteContainer}>
         <Ionicons name="quote" size={24} color="#787bbc" style={styles.quoteIcon} />
         <ThemedText style={styles.quoteText}>
-          "The future depends on what you do today."
+          "Focus on being productive instead of busy."
         </ThemedText>
-        <ThemedText style={styles.quoteAuthor}>— Mahatma Gandhi</ThemedText>
+        <ThemedText style={styles.quoteAuthor}>— Tim Ferriss</ThemedText>
       </ThemedView>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
- titleContainer: {
+  titleContainer: {
     alignItems: 'center',
     marginBottom: 20,
     paddingHorizontal: 16,
@@ -450,10 +400,9 @@ const styles = StyleSheet.create({
     right: 30,
     opacity: 0.8,
   },
-  timerContainer: {
+  ctaContainer: {
     backgroundColor: 'white',
     borderRadius: 20,
-    padding: 24,
     marginHorizontal: 16,
     marginBottom: 24,
     shadowColor: '#000',
@@ -461,72 +410,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 5,
+  },
+  ctaContent: {
+    flexDirection: 'row',
     alignItems: 'center',
+    padding: 24,
   },
-  timerLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-    fontWeight: '500',
+  ctaIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#4c4eaf',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
-  timerText: {
-    fontSize: 56,
+  ctaTextContainer: {
+    flex: 1,
+  },
+  ctaTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 24,
-    fontVariant: ['tabular-nums'],
-    letterSpacing: 2,
+    marginBottom: 4,
   },
-  timerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    width: '100%',
-    marginBottom: 20,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 25,
-    minWidth: 120,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  startButton: {
-    backgroundColor: '#4c4eaf',
-  },
-  pauseButton: {
-    backgroundColor: '#877dd2',
-  },
-  resetButton: {
-    backgroundColor: '#575875',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  taskInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    width: '100%',
-    gap: 12,
-  },
-  taskInput: {
-    flex: 1,
+  ctaSubtitle: {
     fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
+    color: '#666',
   },
   section: {
     marginHorizontal: 16,
@@ -579,50 +489,131 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
   },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statCard: {
+  overviewCard: {
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
-    width: '47%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 12,
-    marginBottom: 4,
-    color: '#333',
+  overviewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  statDescription: {
+  overviewItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  overviewValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  overviewLabel: {
     fontSize: 12,
     color: '#666',
+  },
+  overviewDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#f0f0f0',
+  },
+  progressSection: {
+    marginTop: 20,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
+  progressLabel: {
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '500',
+  },
+  progressPercent: {
+    fontSize: 14,
+    color: '#4c4eaf',
+    fontWeight: '600',
+  },
   progressBar: {
-    height: 6,
+    height: 8,
     backgroundColor: '#f0f0f0',
-    borderRadius: 3,
+    borderRadius: 4,
     overflow: 'hidden',
-    marginTop: 8,
+    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#4c4eaf',
-    borderRadius: 3,
+    borderRadius: 4,
   },
-  streakSubtext: {
-    fontSize: 11,
-    color: '#999',
+  progressText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  weeklyCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  weeklyProgress: {
+    marginBottom: 20,
+  },
+  weeklyProgressBar: {
+    height: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  weeklyProgressFill: {
+    height: '100%',
+    backgroundColor: '#4c4eaf',
+    borderRadius: 5,
+  },
+  weeklyProgressText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  weeklyStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  weeklyStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  weeklyStatValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
     marginTop: 4,
+    marginBottom: 2,
+  },
+  weeklyStatLabel: {
+    fontSize: 10,
+    color: '#666',
+    textAlign: 'center',
+  },
+  weeklyStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#f0f0f0',
   },
   sessionsList: {
     backgroundColor: 'white',
@@ -666,6 +657,17 @@ const styles = StyleSheet.create({
   sessionAction: {
     padding: 8,
   },
+  viewAllButton: {
+    padding: 16,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  viewAllText: {
+    fontSize: 14,
+    color: '#787bbc',
+    fontWeight: '500',
+  },
   quoteContainer: {
     backgroundColor: '#f8f9fa',
     borderRadius: 16,
@@ -693,18 +695,6 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
   },
-  taskInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-    fontStyle: 'italic',
-  },
-  hintText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
   emptyState: {
     backgroundColor: 'white',
     borderRadius: 16,
@@ -729,6 +719,17 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 20,
   },
-
+  emptyStateButton: {
+    backgroundColor: '#4c4eaf',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  emptyStateButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
