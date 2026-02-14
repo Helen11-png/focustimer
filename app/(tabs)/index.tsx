@@ -1,34 +1,36 @@
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { getTheme } from '@/constants/theme';
 import { AntDesign, Feather, FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
-// Тип для сессии
+// Для начала используем фиксированную тему, позже добавим выбор
+const currentTheme = getTheme('purple', false); // или 'blue', 'green'
+
 interface Session {
   id: string;
   task: string;
-  time: number; // в секундах
+  time: number;
   date: string;
   formattedTime: string;
 }
 
 export default function HomeScreen() {
   const router = useRouter();
+  const theme = currentTheme; // Позже это будет динамическим
   
-  // Данные для статистики
   const [stats, setStats] = useState({
-    todayFocus: 85, // минут
-    weeklyGoal: 300, // минут
+    todayFocus: 85,
+    weeklyGoal: 300,
     completed: 42,
     streak: 14,
-    totalFocusTime: 12560, // в секундах
+    totalFocusTime: 12560,
   });
 
-  // Хранение сессий
   const [recentSessions, setRecentSessions] = useState<Session[]>([
     { id: '1', task: 'Work Project', time: 2700, date: 'Today, 10:30 AM', formattedTime: '45 min' },
     { id: '2', task: 'Study Session', time: 3600, date: 'Yesterday, 2:00 PM', formattedTime: '60 min' },
@@ -63,23 +65,12 @@ export default function HomeScreen() {
     }
   };
 
-  // Сохранение сессий в AsyncStorage
   const saveSessions = async (sessions: Session[]) => {
     try {
       await AsyncStorage.setItem('focusSessions', JSON.stringify(sessions));
     } catch (error) {
       console.error('Error saving sessions:', error);
     }
-  };
-
-  const formatTimeToMinutes = (totalSeconds: number) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes} min`;
   };
 
   const formatTotalTime = (totalSeconds: number) => {
@@ -89,10 +80,6 @@ export default function HomeScreen() {
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }
-    return `${minutes} min`;
-  };
-
-  const formatMinutes = (minutes: number) => {
     return `${minutes} min`;
   };
 
@@ -133,211 +120,262 @@ export default function HomeScreen() {
     );
   };
 
-  // Быстрые действия
   const quickActions = [
     { 
       icon: 'play-circle', 
       label: 'Start Timer', 
-      color: '#4c4eaf', 
+      color: theme.primary,
       action: () => router.push('/timer') 
     },
     { 
       icon: 'target', 
       label: 'Goals', 
-      color: '#FF6B6B',
+      color: theme.warning,
       action: () => router.push('/goals')
     },
     { 
       icon: 'bar-chart', 
       label: 'Stats', 
-      color: '#4ECDC4',
+      color: theme.success,
       action: () => router.push('/stats')
     },
     { 
       icon: 'settings', 
       label: 'Settings', 
-      color: '#575875',
+      color: theme.secondary,
       action: () => router.push('/settings')
     },
   ];
 
-  // Прогресс цели
-  const goalProgress = Math.round((stats.todayFocus / 120) * 100); // 120 минут - дневная цель
-  const weeklyProgress = Math.round((stats.todayFocus / stats.weeklyGoal) * 100);
+  const goalProgress = Math.min(Math.round((stats.todayFocus / 120) * 100), 100);
+  const weeklyProgress = Math.min(Math.round((stats.todayFocus / stats.weeklyGoal) * 100), 100);
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#787bbcff', dark: '#40415aff' }}
+      headerBackgroundColor={{ 
+        light: theme.gradient[0], 
+        dark: theme.background 
+      }}
       headerImage={
         <Ionicons name="home" size={100} color="white" style={styles.headerImage} />
       }>
       
-      {/* Приветствие */}
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title" style={styles.welcomeTitle}>Welcome Back, Alex! 👋</ThemedText>
-        <ThemedText style={styles.welcomeSubtitle}>Your focus dashboard</ThemedText>
+        <ThemedText type="title" style={[styles.welcomeTitle, { color: theme.primary }]}>
+          Welcome Back, Alex! 👋
+        </ThemedText>
+        <ThemedText style={[styles.welcomeSubtitle, { color: theme.textSecondary }]}>
+          Your focus dashboard
+        </ThemedText>
       </ThemedView>
 
-      {/* Главный призыв к действию */}
       <TouchableOpacity 
-        style={styles.ctaContainer}
+        style={[styles.ctaContainer, { backgroundColor: theme.surface }]}
         onPress={() => router.push('/timer')}
       >
         <ThemedView style={styles.ctaContent}>
-          <ThemedView style={styles.ctaIcon}>
+          <ThemedView style={[styles.ctaIcon, { backgroundColor: theme.primary }]}>
             <Ionicons name="play-circle" size={40} color="white" />
           </ThemedView>
           <ThemedView style={styles.ctaTextContainer}>
-            <ThemedText type="title" style={styles.ctaTitle}>Start Focus Session</ThemedText>
-            <ThemedText style={styles.ctaSubtitle}>Tap to begin a new focus timer</ThemedText>
+            <ThemedText type="title" style={[styles.ctaTitle, { color: theme.text }]}>
+              Start Focus Session
+            </ThemedText>
+            <ThemedText style={[styles.ctaSubtitle, { color: theme.textSecondary }]}>
+              Tap to begin a new focus timer
+            </ThemedText>
           </ThemedView>
-          <Ionicons name="chevron-forward" size={24} color="#4c4eaf" />
+          <Ionicons name="chevron-forward" size={24} color={theme.primary} />
         </ThemedView>
       </TouchableOpacity>
 
-      {/* Быстрые действия */}
       <ThemedView style={styles.section}>
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Quick Actions</ThemedText>
+        <ThemedText type="subtitle" style={[styles.sectionTitle, { color: theme.text }]}>
+          Quick Actions
+        </ThemedText>
         
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.actionsScroll}>
           {quickActions.map((action, index) => (
             <TouchableOpacity 
               key={index} 
-              style={styles.actionCard} 
+              style={[styles.actionCard, { backgroundColor: theme.surface }]} 
               onPress={action.action}
             >
               <ThemedView style={[styles.actionIcon, { backgroundColor: action.color + '20' }]}>
                 <Feather name={action.icon} size={24} color={action.color} />
               </ThemedView>
-              <ThemedText style={styles.actionLabel}>{action.label}</ThemedText>
+              <ThemedText style={[styles.actionLabel, { color: theme.text }]}>
+                {action.label}
+              </ThemedText>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </ThemedView>
 
-      {/* Общая статистика */}
       <ThemedView style={styles.section}>
         <ThemedView style={styles.sectionHeader}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Focus Overview</ThemedText>
+          <ThemedText type="subtitle" style={[styles.sectionTitle, { color: theme.text }]}>
+            Focus Overview
+          </ThemedText>
           <TouchableOpacity onPress={() => router.push('/stats')}>
-            <ThemedText style={styles.seeAll}>Details →</ThemedText>
+            <ThemedText style={[styles.seeAll, { color: theme.secondary }]}>Details →</ThemedText>
           </TouchableOpacity>
         </ThemedView>
         
-        <ThemedView style={styles.overviewCard}>
+        <ThemedView style={[styles.overviewCard, { backgroundColor: theme.surface }]}>
           <ThemedView style={styles.overviewRow}>
             <ThemedView style={styles.overviewItem}>
-              <FontAwesome name="clock-o" size={20} color="#4c4eaf" />
-              <ThemedText style={styles.overviewValue}>{formatTotalTime(stats.totalFocusTime)}</ThemedText>
-              <ThemedText style={styles.overviewLabel}>Total Focus</ThemedText>
+              <FontAwesome name="clock-o" size={20} color={theme.primary} />
+              <ThemedText style={[styles.overviewValue, { color: theme.text }]}>
+                {formatTotalTime(stats.totalFocusTime)}
+              </ThemedText>
+              <ThemedText style={[styles.overviewLabel, { color: theme.textSecondary }]}>
+                Total Focus
+              </ThemedText>
             </ThemedView>
             
-            <ThemedView style={styles.overviewDivider} />
+            <ThemedView style={[styles.overviewDivider, { backgroundColor: theme.border }]} />
             
             <ThemedView style={styles.overviewItem}>
-              <AntDesign name="checkcircle" size={20} color="#4ECDC4" />
-              <ThemedText style={styles.overviewValue}>{stats.completed}</ThemedText>
-              <ThemedText style={styles.overviewLabel}>Sessions</ThemedText>
+              <AntDesign name="checkcircle" size={20} color={theme.success} />
+              <ThemedText style={[styles.overviewValue, { color: theme.text }]}>
+                {stats.completed}
+              </ThemedText>
+              <ThemedText style={[styles.overviewLabel, { color: theme.textSecondary }]}>
+                Sessions
+              </ThemedText>
             </ThemedView>
             
-            <ThemedView style={styles.overviewDivider} />
+            <ThemedView style={[styles.overviewDivider, { backgroundColor: theme.border }]} />
             
             <ThemedView style={styles.overviewItem}>
-              <Ionicons name="flame" size={20} color="#FF6B6B" />
-              <ThemedText style={styles.overviewValue}>{stats.streak}</ThemedText>
-              <ThemedText style={styles.overviewLabel}>Day Streak</ThemedText>
+              <Ionicons name="flame" size={20} color={theme.warning} />
+              <ThemedText style={[styles.overviewValue, { color: theme.text }]}>
+                {stats.streak}
+              </ThemedText>
+              <ThemedText style={[styles.overviewLabel, { color: theme.textSecondary }]}>
+                Day Streak
+              </ThemedText>
             </ThemedView>
           </ThemedView>
           
           <ThemedView style={styles.progressSection}>
             <ThemedView style={styles.progressHeader}>
-              <ThemedText style={styles.progressLabel}>Today's Progress</ThemedText>
-              <ThemedText style={styles.progressPercent}>{goalProgress}%</ThemedText>
+              <ThemedText style={[styles.progressLabel, { color: theme.textSecondary }]}>
+                Today's Progress
+              </ThemedText>
+              <ThemedText style={[styles.progressPercent, { color: theme.primary }]}>
+                {goalProgress}%
+              </ThemedText>
             </ThemedView>
-            <ThemedView style={styles.progressBar}>
-              <ThemedView style={[styles.progressFill, { width: `${goalProgress}%` }]} />
+            <ThemedView style={[styles.progressBar, { backgroundColor: theme.border }]}>
+              <ThemedView 
+                style={[
+                  styles.progressFill, 
+                  { backgroundColor: theme.primary, width: `${goalProgress}%` }
+                ]} 
+              />
             </ThemedView>
-            <ThemedText style={styles.progressText}>
+            <ThemedText style={[styles.progressText, { color: theme.textSecondary }]}>
               {stats.todayFocus} min of 120 min daily goal
             </ThemedText>
           </ThemedView>
         </ThemedView>
       </ThemedView>
 
-      {/* Достижения на этой неделе */}
       <ThemedView style={styles.section}>
         <ThemedView style={styles.sectionHeader}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>Weekly Progress</ThemedText>
-          <ThemedText style={styles.progressPercent}>{weeklyProgress}%</ThemedText>
+          <ThemedText type="subtitle" style={[styles.sectionTitle, { color: theme.text }]}>
+            Weekly Progress
+          </ThemedText>
+          <ThemedText style={[styles.progressPercent, { color: theme.primary }]}>
+            {weeklyProgress}%
+          </ThemedText>
         </ThemedView>
         
-        <ThemedView style={styles.weeklyCard}>
+        <ThemedView style={[styles.weeklyCard, { backgroundColor: theme.surface }]}>
           <ThemedView style={styles.weeklyProgress}>
-            <ThemedView style={styles.weeklyProgressBar}>
-              <ThemedView style={[styles.weeklyProgressFill, { width: `${weeklyProgress}%` }]} />
+            <ThemedView style={[styles.weeklyProgressBar, { backgroundColor: theme.border }]}>
+              <ThemedView 
+                style={[
+                  styles.weeklyProgressFill, 
+                  { backgroundColor: theme.primary, width: `${weeklyProgress}%` }
+                ]} 
+              />
             </ThemedView>
-            <ThemedText style={styles.weeklyProgressText}>
+            <ThemedText style={[styles.weeklyProgressText, { color: theme.textSecondary }]}>
               {stats.todayFocus} / {stats.weeklyGoal} minutes
             </ThemedText>
           </ThemedView>
           
           <ThemedView style={styles.weeklyStats}>
             <ThemedView style={styles.weeklyStat}>
-              <Feather name="trending-up" size={16} color="#06D6A0" />
-              <ThemedText style={styles.weeklyStatValue}>+12%</ThemedText>
-              <ThemedText style={styles.weeklyStatLabel}>vs last week</ThemedText>
+              <Feather name="trending-up" size={16} color={theme.success} />
+              <ThemedText style={[styles.weeklyStatValue, { color: theme.text }]}>
+                +12%
+              </ThemedText>
+              <ThemedText style={[styles.weeklyStatLabel, { color: theme.textSecondary }]}>
+                vs last week
+              </ThemedText>
             </ThemedView>
             
-            <ThemedView style={styles.weeklyStatDivider} />
+            <ThemedView style={[styles.weeklyStatDivider, { backgroundColor: theme.border }]} />
             
             <ThemedView style={styles.weeklyStat}>
-              <Feather name="target" size={16} color="#4c4eaf" />
-              <ThemedText style={styles.weeklyStatValue}>4.2</ThemedText>
-              <ThemedText style={styles.weeklyStatLabel}>avg sessions/day</ThemedText>
+              <Feather name="target" size={16} color={theme.primary} />
+              <ThemedText style={[styles.weeklyStatValue, { color: theme.text }]}>
+                4.2
+              </ThemedText>
+              <ThemedText style={[styles.weeklyStatLabel, { color: theme.textSecondary }]}>
+                avg sessions/day
+              </ThemedText>
             </ThemedView>
           </ThemedView>
         </ThemedView>
       </ThemedView>
 
-      {/* Последние сессии */}
       <ThemedView style={styles.section}>
         <ThemedView style={styles.sectionHeader}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
+          <ThemedText type="subtitle" style={[styles.sectionTitle, { color: theme.text }]}>
             Recent Sessions {recentSessions.length > 0 && `(${recentSessions.length})`}
           </ThemedText>
           <TouchableOpacity onPress={clearAllSessions}>
-            <ThemedText style={styles.seeAll}>Clear All</ThemedText>
+            <ThemedText style={[styles.seeAll, { color: theme.secondary }]}>Clear All</ThemedText>
           </TouchableOpacity>
         </ThemedView>
         
         {recentSessions.length === 0 ? (
-          <ThemedView style={styles.emptyState}>
-            <Feather name="clock" size={48} color="#ccc" />
-            <ThemedText style={styles.emptyStateText}>No sessions yet</ThemedText>
-            <ThemedText style={styles.emptyStateSubtext}>
+          <ThemedView style={[styles.emptyState, { backgroundColor: theme.surface }]}>
+            <Feather name="clock" size={48} color={theme.textSecondary} />
+            <ThemedText style={[styles.emptyStateText, { color: theme.textSecondary }]}>
+              No sessions yet
+            </ThemedText>
+            <ThemedText style={[styles.emptyStateSubtext, { color: theme.textSecondary }]}>
               Start your first focus session!
             </ThemedText>
             <TouchableOpacity 
-              style={styles.emptyStateButton}
+              style={[styles.emptyStateButton, { backgroundColor: theme.primary }]}
               onPress={() => router.push('/timer')}
             >
               <ThemedText style={styles.emptyStateButtonText}>Start Timer</ThemedText>
             </TouchableOpacity>
           </ThemedView>
         ) : (
-          <ThemedView style={styles.sessionsList}>
+          <ThemedView style={[styles.sessionsList, { backgroundColor: theme.surface }]}>
             {recentSessions.slice(0, 3).map((session) => (
               <TouchableOpacity 
                 key={session.id} 
-                style={styles.sessionCard}
+                style={[styles.sessionCard, { borderBottomColor: theme.border }]}
                 onPress={() => Alert.alert('Session Details', `Task: ${session.task}\nDuration: ${session.formattedTime}\nDate: ${session.date}`)}
               >
-                <ThemedView style={styles.sessionIcon}>
-                  <MaterialIcons name="timer" size={20} color="#787bbc" />
+                <ThemedView style={[styles.sessionIcon, { backgroundColor: theme.secondary + '20' }]}>
+                  <MaterialIcons name="timer" size={20} color={theme.secondary} />
                 </ThemedView>
                 <ThemedView style={styles.sessionInfo}>
-                  <ThemedText style={styles.sessionTask}>{session.task}</ThemedText>
-                  <ThemedText style={styles.sessionDetails}>
+                  <ThemedText style={[styles.sessionTask, { color: theme.text }]}>
+                    {session.task}
+                  </ThemedText>
+                  <ThemedText style={[styles.sessionDetails, { color: theme.textSecondary }]}>
                     {session.formattedTime} • {session.date}
                   </ThemedText>
                 </ThemedView>
@@ -345,17 +383,17 @@ export default function HomeScreen() {
                   style={styles.sessionAction}
                   onPress={() => deleteSession(session.id)}
                 >
-                  <Feather name="trash-2" size={20} color="#999" />
+                  <Feather name="trash-2" size={20} color={theme.textSecondary} />
                 </TouchableOpacity>
               </TouchableOpacity>
             ))}
             
             {recentSessions.length > 3 && (
               <TouchableOpacity 
-                style={styles.viewAllButton}
+                style={[styles.viewAllButton, { borderTopColor: theme.border }]}
                 onPress={() => router.push('/sessions')}
               >
-                <ThemedText style={styles.viewAllText}>
+                <ThemedText style={[styles.viewAllText, { color: theme.secondary }]}>
                   View all {recentSessions.length} sessions →
                 </ThemedText>
               </TouchableOpacity>
@@ -364,18 +402,23 @@ export default function HomeScreen() {
         )}
       </ThemedView>
 
-      {/* Мотивационная цитата */}
-      <ThemedView style={styles.quoteContainer}>
-        <Ionicons name="quote" size={24} color="#787bbc" style={styles.quoteIcon} />
-        <ThemedText style={styles.quoteText}>
+      <ThemedView style={[styles.quoteContainer, { 
+        backgroundColor: theme.background,
+        borderLeftColor: theme.primary 
+      }]}>
+        <Ionicons name="quote" size={24} color={theme.secondary} style={styles.quoteIcon} />
+        <ThemedText style={[styles.quoteText, { color: theme.text }]}>
           "Focus on being productive instead of busy."
         </ThemedText>
-        <ThemedText style={styles.quoteAuthor}>— Tim Ferriss</ThemedText>
+        <ThemedText style={[styles.quoteAuthor, { color: theme.textSecondary }]}>
+          — Tim Ferriss
+        </ThemedText>
       </ThemedView>
     </ParallaxScrollView>
   );
 }
 
+// Стили остаются без изменений, только удаляем все жестко заданные цвета
 const styles = StyleSheet.create({
   titleContainer: {
     alignItems: 'center',
@@ -387,11 +430,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
-    color: '#787bbc',
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
   },
   headerImage: {
@@ -401,7 +442,6 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   ctaContainer: {
-    backgroundColor: 'white',
     borderRadius: 20,
     marginHorizontal: 16,
     marginBottom: 24,
@@ -420,7 +460,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#4c4eaf',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -431,12 +470,10 @@ const styles = StyleSheet.create({
   ctaTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   ctaSubtitle: {
     fontSize: 14,
-    color: '#666',
   },
   section: {
     marginHorizontal: 16,
@@ -451,11 +488,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
   },
   seeAll: {
     fontSize: 14,
-    color: '#787bbc',
     fontWeight: '500',
   },
   actionsScroll: {
@@ -463,7 +498,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   actionCard: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -486,11 +520,9 @@ const styles = StyleSheet.create({
   actionLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#333',
     textAlign: 'center',
   },
   overviewCard: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -512,18 +544,15 @@ const styles = StyleSheet.create({
   overviewValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     marginTop: 8,
     marginBottom: 4,
   },
   overviewLabel: {
     fontSize: 12,
-    color: '#666',
   },
   overviewDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#f0f0f0',
   },
   progressSection: {
     marginTop: 20,
@@ -536,32 +565,26 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     fontSize: 14,
-    color: '#555',
     fontWeight: '500',
   },
   progressPercent: {
     fontSize: 14,
-    color: '#4c4eaf',
     fontWeight: '600',
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#f0f0f0',
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#4c4eaf',
     borderRadius: 4,
   },
   progressText: {
     fontSize: 12,
-    color: '#666',
   },
   weeklyCard: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -575,19 +598,16 @@ const styles = StyleSheet.create({
   },
   weeklyProgressBar: {
     height: 10,
-    backgroundColor: '#f0f0f0',
     borderRadius: 5,
     overflow: 'hidden',
     marginBottom: 8,
   },
   weeklyProgressFill: {
     height: '100%',
-    backgroundColor: '#4c4eaf',
     borderRadius: 5,
   },
   weeklyProgressText: {
     fontSize: 12,
-    color: '#666',
   },
   weeklyStats: {
     flexDirection: 'row',
@@ -601,22 +621,18 @@ const styles = StyleSheet.create({
   weeklyStatValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginTop: 4,
     marginBottom: 2,
   },
   weeklyStatLabel: {
     fontSize: 10,
-    color: '#666',
     textAlign: 'center',
   },
   weeklyStatDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#f0f0f0',
   },
   sessionsList: {
-    backgroundColor: 'white',
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -630,13 +646,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   sessionIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#787bbc20',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -647,12 +661,10 @@ const styles = StyleSheet.create({
   sessionTask: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   sessionDetails: {
     fontSize: 12,
-    color: '#999',
   },
   sessionAction: {
     padding: 8,
@@ -661,22 +673,18 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
   },
   viewAllText: {
     fontSize: 14,
-    color: '#787bbc',
     fontWeight: '500',
   },
   quoteContainer: {
-    backgroundColor: '#f8f9fa',
     borderRadius: 16,
     padding: 24,
     marginHorizontal: 16,
     marginBottom: 32,
     alignItems: 'center',
     borderLeftWidth: 4,
-    borderLeftColor: '#787bbc',
   },
   quoteIcon: {
     marginBottom: 12,
@@ -685,18 +693,15 @@ const styles = StyleSheet.create({
   quoteText: {
     fontSize: 16,
     fontStyle: 'italic',
-    color: '#333',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 8,
   },
   quoteAuthor: {
     fontSize: 14,
-    color: '#666',
     fontWeight: '500',
   },
   emptyState: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 40,
     alignItems: 'center',
@@ -710,19 +715,16 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
   },
   emptyStateButton: {
-    backgroundColor: '#4c4eaf',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 24,

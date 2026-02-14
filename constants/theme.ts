@@ -1,41 +1,133 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Ваша цветовая палитра
+export const colors = {
+  purple: {
+    primary: '#4c4eaf',
+    secondary: '#787bbc',
+    accent: '#9d9ae5',
+    background: '#f8f9fa',
+    surface: '#ffffff',
+    text: '#333333',
+    textSecondary: '#666666',
+    border: '#e9ecef',
+    success: '#06D6A0',
+    warning: '#FFD166',
+    error: '#EF476F',
+    gradient: ['#4c4eaf', '#787bbc', '#9d9ae5'],
+  },
+  
+  purpleDark: {
+    primary: '#9d9ae5',
+    secondary: '#787bbc',
+    accent: '#4c4eaf',
+    background: '#1a1a2c',
+    surface: '#2a2a3c',
+    text: '#ffffff',
+    textSecondary: '#b0b0b0',
+    border: '#3a3a4c',
+    success: '#06D6A0',
+    warning: '#FFD166',
+    error: '#EF476F',
+    gradient: ['#4c4eaf', '#787bbc', '#9d9ae5'],
+  },
 
+  blue: {
+    primary: '#2563eb',
+    secondary: '#3b82f6',
+    accent: '#60a5fa',
+    background: '#f0f9ff',
+    surface: '#ffffff',
+    text: '#1e293b',
+    textSecondary: '#64748b',
+    border: '#e2e8f0',
+    success: '#10b981',
+    warning: '#f59e0b',
+    error: '#ef4444',
+    gradient: ['#2563eb', '#3b82f6', '#60a5fa'],
+  },
+
+  blueDark: {
+    primary: '#60a5fa',
+    secondary: '#3b82f6',
+    accent: '#2563eb',
+    background: '#0f172a',
+    surface: '#1e293b',
+    text: '#ffffff',
+    textSecondary: '#94a3b8',
+    border: '#334155',
+    success: '#10b981',
+    warning: '#f59e0b',
+    error: '#ef4444',
+    gradient: ['#2563eb', '#3b82f6', '#60a5fa'],
+  },
+
+  green: {
+    primary: '#2d6a4f',
+    secondary: '#40916c',
+    accent: '#52b788',
+    background: '#f0fdf4',
+    surface: '#ffffff',
+    text: '#1e3a2b',
+    textSecondary: '#4a6b5a',
+    border: '#dcfce7',
+    success: '#2d6a4f',
+    warning: '#b45309',
+    error: '#b91c1c',
+    gradient: ['#2d6a4f', '#40916c', '#52b788'],
+  },
+
+  greenDark: {
+    primary: '#52b788',
+    secondary: '#40916c',
+    accent: '#2d6a4f',
+    background: '#081c15',
+    surface: '#1b3a2b',
+    text: '#ffffff',
+    textSecondary: '#a7c4b5',
+    border: '#2d5a3a',
+    success: '#2d6a4f',
+    warning: '#b45309',
+    error: '#b91c1c',
+    gradient: ['#2d6a4f', '#40916c', '#52b788'],
+  },
+};
+
+// Функция для получения текущей темы
+export const getTheme = (themeName: string = 'purple', isDark: boolean = false) => {
+  const key = isDark && themeName === 'purple' ? 'purpleDark' : 
+              isDark && themeName === 'blue' ? 'blueDark' :
+              isDark && themeName === 'green' ? 'greenDark' : 
+              themeName;
+  
+  return colors[key as keyof typeof colors] || colors.purple;
+};
+
+// Базовые цвета для навигации и системных компонентов
 export const Colors = {
   light: {
     text: '#11181C',
     background: '#fff',
-    tint: tintColorLight,
+    tint: '#4c4eaf', // Используем ваш primary цвет
     icon: '#687076',
     tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    tabIconSelected: '#4c4eaf',
   },
   dark: {
     text: '#ECEDEE',
     background: '#151718',
-    tint: tintColorDark,
+    tint: '#9d9ae5', // Используем ваш primary цвет для dark темы
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    tabIconSelected: '#9d9ae5',
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {

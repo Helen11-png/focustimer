@@ -1,4 +1,3 @@
-// app/(tabs)/settings.tsx
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getCurrentTheme } from '@/constants/colors';
@@ -17,7 +16,6 @@ export default function SettingsScreen() {
   const [currentTheme, setCurrentTheme] = useState('purple');
   const [isDark, setIsDark] = useState(false);
 
-  // Загружаем сохраненную тему
   useEffect(() => {
     loadTheme();
   }, []);
