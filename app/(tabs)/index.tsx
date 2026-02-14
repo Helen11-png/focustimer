@@ -1,15 +1,12 @@
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getTheme } from '@/constants/theme';
 import { AntDesign, Feather, FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-
-// Для начала используем фиксированную тему, позже добавим выбор
-const currentTheme = getTheme('purple', false); // или 'blue', 'green'
+import { useTheme } from '../../context/ThemeContext';
 
 interface Session {
   id: string;
@@ -21,7 +18,7 @@ interface Session {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const theme = currentTheme; // Позже это будет динамическим
+  const { theme, themeName, isDark, toggleDarkMode } = useTheme();
   
   const [stats, setStats] = useState({
     todayFocus: 85,
@@ -145,12 +142,18 @@ export default function HomeScreen() {
       color: theme.secondary,
       action: () => router.push('/settings')
     },
+    { 
+      icon: isDark ? 'sun' : 'moon', 
+      label: isDark ? 'Light' : 'Dark', 
+      color: theme.accent,
+      action: toggleDarkMode
+    },
   ];
 
   const goalProgress = Math.min(Math.round((stats.todayFocus / 120) * 100), 100);
   const weeklyProgress = Math.min(Math.round((stats.todayFocus / stats.weeklyGoal) * 100), 100);
 
-  return (
+   return (
     <ParallaxScrollView
       headerBackgroundColor={{ 
         light: theme.gradient[0], 
