@@ -1,6 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import {
@@ -12,8 +11,9 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
-// Типы для цветовой схемы
+
 type ColorScheme = {
   id: string;
   name: string;
@@ -31,7 +31,6 @@ type ColorScheme = {
   gradient: string[];
 };
 
-// Интерфейс для пользовательских цветов
 type CustomColor = {
   id: string;
   name: string;
@@ -39,16 +38,14 @@ type CustomColor = {
 };
 
 export default function SettingsScreen() {
-  const [currentScheme, setCurrentScheme] = useState<string>('purple');
-  const [useDarkMode, setUseDarkMode] = useState(false);
-  const [useSystemTheme, setUseSystemTheme] = useState(true);
+  const { theme, themeName, isDark, setTheme, toggleDarkMode } = useTheme(); 
+  const [useSystemTheme, setUseSystemTheme] = useState(false);
   const [customColors, setCustomColors] = useState<CustomColor[]>([]);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [newColorName, setNewColorName] = useState('');
   const [newColorValue, setNewColorValue] = useState('#787bbc');
   const [editingColor, setEditingColor] = useState<CustomColor | null>(null);
 
-  // Предустановленные цветовые схемы
   const colorSchemes: ColorScheme[] = [
     {
       id: 'purple',
@@ -56,11 +53,11 @@ export default function SettingsScreen() {
       primary: '#4c4eaf',
       secondary: '#787bbc',
       accent: '#9d9ae5',
-      background: useDarkMode ? '#1a1a2c' : '#f8f9fa',
-      surface: useDarkMode ? '#2a2a3c' : '#ffffff',
-      text: useDarkMode ? '#ffffff' : '#333333',
-      textSecondary: useDarkMode ? '#b0b0b0' : '#666666',
-      border: useDarkMode ? '#3a3a4c' : '#e9ecef',
+      background: isDark ? '#1a1a2c' : '#f8f9fa',
+      surface: isDark ? '#2a2a3c' : '#ffffff',
+      text: isDark ? '#ffffff' : '#333333',
+      textSecondary: isDark ? '#b0b0b0' : '#666666',
+      border: isDark ? '#3a3a4c' : '#e9ecef',
       success: '#06D6A0',
       warning: '#FFD166',
       error: '#EF476F',
@@ -72,11 +69,11 @@ export default function SettingsScreen() {
       primary: '#2563eb',
       secondary: '#3b82f6',
       accent: '#60a5fa',
-      background: useDarkMode ? '#0f172a' : '#f0f9ff',
-      surface: useDarkMode ? '#1e293b' : '#ffffff',
-      text: useDarkMode ? '#ffffff' : '#1e293b',
-      textSecondary: useDarkMode ? '#94a3b8' : '#64748b',
-      border: useDarkMode ? '#334155' : '#e2e8f0',
+      background: isDark ? '#0f172a' : '#f0f9ff',
+      surface: isDark ? '#1e293b' : '#ffffff',
+      text: isDark ? '#ffffff' : '#1e293b',
+      textSecondary: isDark ? '#94a3b8' : '#64748b',
+      border: isDark ? '#334155' : '#e2e8f0',
       success: '#10b981',
       warning: '#f59e0b',
       error: '#ef4444',
@@ -88,11 +85,11 @@ export default function SettingsScreen() {
       primary: '#2d6a4f',
       secondary: '#40916c',
       accent: '#52b788',
-      background: useDarkMode ? '#081c15' : '#f0fdf4',
-      surface: useDarkMode ? '#1b3a2b' : '#ffffff',
-      text: useDarkMode ? '#ffffff' : '#1e3a2b',
-      textSecondary: useDarkMode ? '#a7c4b5' : '#4a6b5a',
-      border: useDarkMode ? '#2d5a3a' : '#dcfce7',
+      background: isDark ? '#081c15' : '#f0fdf4',
+      surface: isDark ? '#1b3a2b' : '#ffffff',
+      text: isDark ? '#ffffff' : '#1e3a2b',
+      textSecondary: isDark ? '#a7c4b5' : '#4a6b5a',
+      border: isDark ? '#2d5a3a' : '#dcfce7',
       success: '#2d6a4f',
       warning: '#b45309',
       error: '#b91c1c',
@@ -104,11 +101,11 @@ export default function SettingsScreen() {
       primary: '#b83280',
       secondary: '#d53f8c',
       accent: '#ed64a6',
-      background: useDarkMode ? '#2a1a2a' : '#fff5f7',
-      surface: useDarkMode ? '#3a2a3a' : '#ffffff',
-      text: useDarkMode ? '#ffffff' : '#2a1a2a',
-      textSecondary: useDarkMode ? '#d4b0c0' : '#7a4a6a',
-      border: useDarkMode ? '#4a3a4a' : '#fed7e2',
+      background: isDark ? '#2a1a2a' : '#fff5f7',
+      surface: isDark ? '#3a2a3a' : '#ffffff',
+      text: isDark ? '#ffffff' : '#2a1a2a',
+      textSecondary: isDark ? '#d4b0c0' : '#7a4a6a',
+      border: isDark ? '#4a3a4a' : '#fed7e2',
       success: '#b83280',
       warning: '#c05640',
       error: '#c53030',
@@ -120,11 +117,11 @@ export default function SettingsScreen() {
       primary: '#c2410c',
       secondary: '#ea580c',
       accent: '#f97316',
-      background: useDarkMode ? '#2a1a0a' : '#fff7ed',
-      surface: useDarkMode ? '#3a2a1a' : '#ffffff',
-      text: useDarkMode ? '#ffffff' : '#2a1a0a',
-      textSecondary: useDarkMode ? '#d4b090' : '#7a5a3a',
-      border: useDarkMode ? '#4a3a2a' : '#ffedd5',
+      background: isDark ? '#2a1a0a' : '#fff7ed',
+      surface: isDark ? '#3a2a1a' : '#ffffff',
+      text: isDark ? '#ffffff' : '#2a1a0a',
+      textSecondary: isDark ? '#d4b090' : '#7a5a3a',
+      border: isDark ? '#4a3a2a' : '#ffedd5',
       success: '#c2410c',
       warning: '#d97706',
       error: '#dc2626',
@@ -136,11 +133,11 @@ export default function SettingsScreen() {
       primary: '#4b5563',
       secondary: '#6b7280',
       accent: '#9ca3af',
-      background: useDarkMode ? '#111827' : '#f9fafb',
-      surface: useDarkMode ? '#1f2937' : '#ffffff',
-      text: useDarkMode ? '#ffffff' : '#1f2937',
-      textSecondary: useDarkMode ? '#9ca3af' : '#6b7280',
-      border: useDarkMode ? '#374151' : '#e5e7eb',
+      background: isDark ? '#111827' : '#f9fafb',
+      surface: isDark ? '#1f2937' : '#ffffff',
+      text: isDark ? '#ffffff' : '#1f2937',
+      textSecondary: isDark ? '#9ca3af' : '#6b7280',
+      border: isDark ? '#374151' : '#e5e7eb',
       success: '#10b981',
       warning: '#f59e0b',
       error: '#ef4444',
@@ -148,20 +145,15 @@ export default function SettingsScreen() {
     },
   ];
 
-  // Загрузка сохраненных настроек
   useEffect(() => {
     loadSettings();
   }, []);
 
   const loadSettings = async () => {
     try {
-      const savedScheme = await AsyncStorage.getItem('colorScheme');
-      const savedDarkMode = await AsyncStorage.getItem('darkMode');
       const savedSystemTheme = await AsyncStorage.getItem('systemTheme');
       const savedCustomColors = await AsyncStorage.getItem('customColors');
 
-      if (savedScheme) setCurrentScheme(savedScheme);
-      if (savedDarkMode) setUseDarkMode(JSON.parse(savedDarkMode));
       if (savedSystemTheme) setUseSystemTheme(JSON.parse(savedSystemTheme));
       if (savedCustomColors) setCustomColors(JSON.parse(savedCustomColors));
     } catch (error) {
@@ -178,24 +170,27 @@ export default function SettingsScreen() {
   };
 
   const handleSchemeChange = (schemeId: string) => {
-    setCurrentScheme(schemeId);
+    setTheme(schemeId as 'purple' | 'blue' | 'green' | 'pink' | 'orange' | 'gray');
     saveSettings('colorScheme', schemeId);
   };
 
   const handleDarkModeToggle = () => {
-    const newValue = !useDarkMode;
-    setUseDarkMode(newValue);
-    saveSettings('darkMode', newValue);
+    toggleDarkMode();
   };
 
   const handleSystemThemeToggle = () => {
     const newValue = !useSystemTheme;
     setUseSystemTheme(newValue);
     saveSettings('systemTheme', newValue);
+    
+    if (newValue) {
+      const systemTheme = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+      // Здесь нужна дополнительная логика для системной темы
+    }
   };
 
   const getCurrentScheme = () => {
-    return colorSchemes.find(s => s.id === currentScheme) || colorSchemes[0];
+    return colorSchemes.find(s => s.id === themeName) || colorSchemes[0];
   };
 
   const handleAddCustomColor = () => {
@@ -277,14 +272,11 @@ export default function SettingsScreen() {
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
-            setCurrentScheme('purple');
-            setUseDarkMode(false);
-            setUseSystemTheme(true);
+            setTheme('purple', false);
+            setUseSystemTheme(false);
             setCustomColors([]);
             
             await AsyncStorage.multiRemove([
-              'colorScheme',
-              'darkMode',
               'systemTheme',
               'customColors',
             ]);
@@ -362,7 +354,7 @@ export default function SettingsScreen() {
             style={[
               styles.toggle,
               { backgroundColor: scheme.border },
-              useDarkMode && !useSystemTheme && { backgroundColor: scheme.primary }
+              isDark && !useSystemTheme && { backgroundColor: scheme.primary }
             ]}
             onPress={handleDarkModeToggle}
             disabled={useSystemTheme}
@@ -370,7 +362,7 @@ export default function SettingsScreen() {
             <View
               style={[
                 styles.toggleHandle,
-                useDarkMode && !useSystemTheme && styles.toggleHandleActive,
+                isDark && !useSystemTheme && styles.toggleHandleActive,
                 useSystemTheme && styles.toggleHandleDisabled,
               ]}
             />
@@ -387,7 +379,6 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      {/* Цветовые схемы */}
       <View style={[styles.section, { backgroundColor: scheme.surface }]}>
         <View style={styles.sectionHeader}>
           <Feather name="palette" size={20} color={scheme.primary} />
@@ -403,7 +394,7 @@ export default function SettingsScreen() {
               style={[
                 styles.colorSchemeCard,
                 { backgroundColor: scheme.background },
-                currentScheme === colorScheme.id && {
+                themeName === colorScheme.id && {
                   borderColor: colorScheme.primary,
                   borderWidth: 2,
                 },
@@ -429,7 +420,7 @@ export default function SettingsScreen() {
                   ))}
                 </View>
               </View>
-              {currentScheme === colorScheme.id && (
+              {themeName === colorScheme.id && (
                 <View style={[styles.checkmark, { backgroundColor: colorScheme.primary }]}>
                   <Feather name="check" size={12} color="white" />
                 </View>
@@ -439,12 +430,11 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* Пользовательские цвета */}
       <View style={[styles.section, { backgroundColor: scheme.surface }]}>
         <View style={styles.sectionHeader}>
           <Feather name="plus-circle" size={20} color={scheme.primary} />
           <ThemedText style={[styles.sectionTitle, { color: scheme.text }]}>
-            Custom Colors
+            Custom Colors (Saved)
           </ThemedText>
         </View>
 
@@ -500,7 +490,6 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      {/* Предпросмотр цветов */}
       <View style={[styles.section, { backgroundColor: scheme.surface }]}>
         <View style={styles.sectionHeader}>
           <Feather name="eye" size={20} color={scheme.primary} />
